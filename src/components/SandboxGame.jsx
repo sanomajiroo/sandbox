@@ -19,7 +19,7 @@ export default function SandboxGame() {
 
   return (
     <div
-      className="flex flex-col w-full max-w-md bg-[#0f0f0f] text-white min-h-screen animate-crt-flicker"
+      className="flex flex-col w-full max-w-md bg-[#0f0f0f] text-white min-h-screen"
       style={{ fontFamily: "'Press Start 2P', monospace" }}
     >
       {/* ── Glitch Header ── */}

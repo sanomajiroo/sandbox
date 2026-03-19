@@ -64,7 +64,7 @@ export default function GameCanvas({ canvasRef, paint, selected, brush }) {
       style={{ touchAction: 'none', userSelect: 'none' }}
     >
       {/* CRT effect layers */}
-      <div className="absolute inset-0 scanlines crt-vignette scanline-beam pointer-events-none z-10" />
+      <div className="absolute inset-0 scanlines crt-vignette pointer-events-none z-10" />
 
       <canvas
         ref={canvasRef}
