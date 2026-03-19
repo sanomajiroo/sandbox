@@ -1,18 +1,68 @@
+import { useRef, useEffect, useCallback } from 'react'
 import { W, H } from '../constants'
 
 export default function GameCanvas({ canvasRef, paint, selected, brush }) {
-  const painting = { current: false }
+  const painting   = useRef(false)
+  const wrapRef    = useRef(null)
 
-  function doPaint(e) {
-    if (!painting.current) return
-    const pts = e.touches
-      ? Array.from(e.touches)
-      : [{ clientX: e.clientX, clientY: e.clientY }]
-    for (const pt of pts) paint(pt.clientX, pt.clientY, selected, brush)
+  // selected/brush는 최신값을 ref로 유지 (stale closure 방지)
+  const selectedRef = useRef(selected)
+  const brushRef    = useRef(brush)
+  useEffect(() => { selectedRef.current = selected }, [selected])
+  useEffect(() => { brushRef.current    = brush    }, [brush])
+
+  const doPaint = useCallback((clientX, clientY) => {
+    paint(clientX, clientY, selectedRef.current, brushRef.current)
+  }, [paint])
+
+  useEffect(() => {
+    const el = wrapRef.current
+    if (!el) return
+
+    function onTouchStart(e) {
+      e.preventDefault()
+      painting.current = true
+      for (const t of e.changedTouches) doPaint(t.clientX, t.clientY)
+    }
+    function onTouchMove(e) {
+      e.preventDefault()
+      if (!painting.current) return
+      for (const t of e.changedTouches) doPaint(t.clientX, t.clientY)
+    }
+    function onTouchEnd(e) {
+      e.preventDefault()
+      painting.current = false
+    }
+
+    el.addEventListener('touchstart',  onTouchStart, { passive: false })
+    el.addEventListener('touchmove',   onTouchMove,  { passive: false })
+    el.addEventListener('touchend',    onTouchEnd,   { passive: false })
+    el.addEventListener('touchcancel', onTouchEnd,   { passive: false })
+    return () => {
+      el.removeEventListener('touchstart',  onTouchStart)
+      el.removeEventListener('touchmove',   onTouchMove)
+      el.removeEventListener('touchend',    onTouchEnd)
+      el.removeEventListener('touchcancel', onTouchEnd)
+    }
+  }, [doPaint])
+
+  function onMouseDown(e) {
+    painting.current = true
+    doPaint(e.clientX, e.clientY)
   }
+  function onMouseMove(e) {
+    if (!painting.current) return
+    doPaint(e.clientX, e.clientY)
+  }
+  function onMouseUp()    { painting.current = false }
+  function onMouseLeave() { painting.current = false }
 
   return (
-    <div className="relative w-full" style={{ touchAction: 'none', userSelect: 'none' }}>
+    <div
+      ref={wrapRef}
+      className="relative w-full"
+      style={{ touchAction: 'none', userSelect: 'none' }}
+    >
       {/* CRT effect layers */}
       <div className="absolute inset-0 scanlines crt-vignette scanline-beam pointer-events-none z-10" />
 
@@ -27,13 +77,10 @@ export default function GameCanvas({ canvasRef, paint, selected, brush }) {
           aspectRatio: `${W} / ${H}`,
           boxShadow: '0 0 0 1px #0a0a0a, 0 4px 32px rgba(0,0,0,0.9)',
         }}
-        onPointerDown={e => { painting.current = true; doPaint(e) }}
-        onPointerMove={e => doPaint(e)}
-        onPointerUp={() => { painting.current = false }}
-        onPointerLeave={() => { painting.current = false }}
-        onTouchStart={e => { e.preventDefault(); painting.current = true; doPaint(e) }}
-        onTouchMove={e => { e.preventDefault(); doPaint(e) }}
-        onTouchEnd={() => { painting.current = false }}
+        onMouseDown={onMouseDown}
+        onMouseMove={onMouseMove}
+        onMouseUp={onMouseUp}
+        onMouseLeave={onMouseLeave}
       />
     </div>
   )
